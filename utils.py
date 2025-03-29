@@ -38,6 +38,22 @@ def build_graph(filepath: str):
     return data
 
 
-data = build_graph("data/node_information.csv")
-print(data.x)
-print(data.edge_index)
+def train_test_split(data: Data, train_ratio: float = 0.8) -> tuple[Data, Data]:
+    """
+    Splits the graph data into training and testing sets.
+    Args:
+        data (Data): The graph data.
+        train_ratio (float): The proportion of edges to include in the training set.
+    Returns:
+        Data, Data: The training and testing graph data.
+    """
+    num_edges = data.edge_index.size(1)
+    num_train_edges = int(num_edges * train_ratio)
+
+    train_edge_index = data.edge_index[:, :num_train_edges]
+    test_edge_index = data.edge_index[:, num_train_edges:]
+
+    train_data = Data(x=data.x, edge_index=train_edge_index)
+    test_data = Data(x=data.x, edge_index=test_edge_index)
+
+    return train_data, test_data
