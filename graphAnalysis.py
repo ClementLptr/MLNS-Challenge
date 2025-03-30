@@ -4,7 +4,7 @@ import torch
 from torch_geometric.data import Data
 from torch_geometric.utils import subgraph, to_networkx
 
-from utils import build_graph
+from utils import build_train_graph
 
 
 def plot_subgraph(data: Data, nodes_to_sample: int = 1000):
@@ -125,7 +125,7 @@ def compute_graph_metrics(data):
 
 if __name__ == "__main__":
     # Example usage
-    data = build_graph("data/node_information.csv")
+    data = build_train_graph("data/node_information.csv")
     # plot_subgraph(data)
     metrics = compute_graph_metrics(data)
     print(metrics)

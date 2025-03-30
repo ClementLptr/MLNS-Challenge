@@ -5,7 +5,7 @@ from torch import Tensor
 from torch_geometric.data import Data
 from torch_geometric.utils import subgraph, to_networkx
 
-from utils import build_graph, train_test_split
+from utils import build_train_graph, train_test_split
 
 
 def preferential_attachment_scores(data: Data) -> Tensor:
@@ -125,7 +125,7 @@ def jaccard_index_predictions(
 
 
 if __name__ == "__main__":
-    data = build_graph("data/node_information.csv")
+    data = build_train_graph("data/node_information.csv")
     train_data, test_data = train_test_split(data, train_ratio=0.8)
     preferential_attachment_predictions(train_data, test_data, proportion=1e-4)
     jaccard_index_predictions(train_data, test_data, proportion=1e-4)
