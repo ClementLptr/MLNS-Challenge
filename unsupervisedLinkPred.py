@@ -5,7 +5,8 @@ from torch import Tensor
 from torch_geometric.data import Data
 from torch_geometric.utils import subgraph, to_networkx
 
-from dataPreparation import build_graph, train_test_split
+from dataPreparation import build_train_test_graphs, train_test_split
+from utils import convert_preds_to_submission
 
 
 def preferential_attachment_scores(data: Data) -> Tensor:
@@ -47,52 +48,38 @@ def jaccard_index_scores(data: Data) -> Tensor:
     return jaccard_index
 
 
+# TODO: Add the possibility to use a threshold on the attachment coeff to predict instead of a proportion
 def preferential_attachment_predictions(
     train_data: Data, test_data: Data, proportion: float
-) -> None:
+) -> list[tuple[int, int]]:
     """
     Predicts links on the test set using the preferential attachment method.
     Args:
         train_data (Data): The training graph data.
         test_data (Data): The test graph data.
-        proportion (float): The proportion of edges to predict.
+        proportion (float): The proportion of edges of test_data.edge_index to that will be labeled as positive.
     """
     attachment_coef = preferential_attachment_scores(train_data)
     # Get the top k pairs with the highest scores
 
-    prediction_edge_index = torch.cat(
-        [test_data.edge_index, test_data.fake_edge_index], dim=1
-    )
-    k = int(proportion * prediction_edge_index.shape[1])
+    k = int(proportion * test_data.edge_index.shape[1])
 
     test_attachment_coef = attachment_coef[
-        prediction_edge_index[0], prediction_edge_index[1]
+        test_data.edge_index[0], test_data.edge_index[1]
     ]  # Get the scores for the test edges. Output is 1D!
     top_k_indices = torch.topk(test_attachment_coef, k=k).indices.tolist()
 
     y_pred = [
-        (prediction_edge_index[0][index].item(), prediction_edge_index[1][index].item())
+        (test_data.edge_index[0][index].item(), test_data.edge_index[1][index].item())
         for index in top_k_indices
     ]
 
-    precision = len(
-        set(y_pred) & set(tuple(row) for row in test_data.edge_index.t().tolist())
-    ) / len(y_pred)
-
-    recall = (
-        len(set(y_pred) & set(tuple(row) for row in test_data.edge_index.t().tolist()))
-        / test_data.edge_index.shape[1]
-    )
-
-    f1 = 2 * (precision * recall) / (precision + recall) + 1e-10
-    print(
-        f"precision: {precision:.4f}, recall: {recall:.4f}, f1: {f1:.4f}, f1: {f1:.4f}"
-    )
+    return y_pred
 
 
 def jaccard_index_predictions(
     train_data: Data, test_data: Data, proportion: float
-) -> None:
+) -> list[tuple[int, int]]:
     """
     Predicts links on the test set using the preferential attachment method.
     Args:
@@ -121,11 +108,12 @@ def jaccard_index_predictions(
 
 
 if __name__ == "__main__":
-    data = build_graph("data/node_information_id_remapped.csv")
+    train_data, test_data = build_train_test_graphs(
+        "data/node_information_id_remapped.csv"
+    )
     # train_data, test_data = train_test_split(
     #     data, train_ratio=0.8, negative_samples_factor=1
     # )
-    train_data = Data(x=data.x, edge_index=data.edge_index)
-    test_data = Data(x=data.x, edge_index=data.test_edges)
-    jaccard_index_predictions(train_data, test_data, proportion=0.5)
+    preds = preferential_attachment_predictions(train_data, test_data, proportion=0.5)
+    convert_preds_to_submission(preds)
     # jaccard_index_predictions(train_data, test_data, proportion=1e-4)

@@ -4,7 +4,7 @@ import torch
 from torch_geometric.data import Data
 from torch_geometric.utils import subgraph, to_networkx
 
-from dataPreparation import build_graph
+from dataPreparation import build_train_test_graphs
 
 
 def plot_graph(data: Data):
@@ -153,7 +153,7 @@ def compute_graph_metrics(data):
 
 
 if __name__ == "__main__":
-    data = build_graph("data/node_information_id_remapped.csv")
+    data = build_train_test_graphs("data/node_information_id_remapped.csv")
     # plot_graph(data)
     metrics = compute_graph_metrics(data)
     print(metrics)

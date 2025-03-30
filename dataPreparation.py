@@ -6,34 +6,37 @@ import torch
 from torch_geometric.data import Data
 
 
-def build_graph(filepath: str):
-    data = Data()
+def build_train_test_graphs(filepath: str) -> tuple[Data, Data]:
     # Read CSV and name the first column as ID
     x = pd.read_csv(filepath, header=None)
     column_names = ["ID"] + [f"feature_{i}" for i in range(1, len(x.columns))]
     x.columns = column_names
     x = x.drop("ID", axis=1).values
 
-    data.x = torch.tensor(x)
+    train_data, test_data = (
+        Data(x=torch.tensor(x, dtype=torch.float)),
+        Data(x=torch.tensor(x, dtype=torch.float)),
+    )
 
     with open("data/train_edges_id_remapped.txt", "r") as f:
-        edges = f.readlines()
-        edges = [line.split() for line in edges]
+        lines = f.readlines()
+        edges = [line.split() for line in lines]
         edges = [edge for edge in edges if edge[2] == "1"]
         edges = [(int(edge[0]), int(edge[1])) for edge in edges]
         source, target = [edge[0] for edge in edges], [edge[1] for edge in edges]
-        data.edge_index = torch.tensor([source, target])
+    train_data.edge_index = torch.tensor([source, target])
 
     with open("data/test_edges_id_remapped.txt", "r") as f:
-        edges = f.readlines()
-        edges = [line.split() for line in edges]
+        lines = f.readlines()
+        edges = [line.split() for line in lines]
         source, target = (
             [int(edge[0]) for edge in edges],
             [int(edge[1]) for edge in edges],
         )
-        data.test_edges = torch.tensor([source, target])
 
-    return data
+    test_data.edge_index = torch.tensor([source, target])
+
+    return train_data, test_data
 
 
 def train_test_split(
