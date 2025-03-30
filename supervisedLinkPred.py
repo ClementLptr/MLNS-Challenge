@@ -4,7 +4,7 @@ import pandas as pd
 from torch_geometric.data import Data
 from torch_geometric.utils import to_networkx
 
-from utils import build_train_graph
+from dataPreparation import build_train_graph
 
 
 def compute_node_features(data: Data) -> np.ndarray:

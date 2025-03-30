@@ -4,15 +4,30 @@ import torch
 from torch_geometric.data import Data
 from torch_geometric.utils import subgraph, to_networkx
 
-from utils import build_train_graph
+from dataPreparation import build_graph
 
 
-def plot_subgraph(data: Data, nodes_to_sample: int = 1000):
-    node_idx = torch.randperm(data.num_nodes)[:nodes_to_sample]
-    edge_index, edge_mask = subgraph(node_idx, data.edge_index, relabel_nodes=True)
-    sampled_data = Data(edge_index=edge_index, num_nodes=nodes_to_sample)
-    G = to_networkx(sampled_data, to_undirected=True)
-    nx.draw(G, node_color="lightblue", edge_color="gray", node_size=5)
+def plot_graph(data: Data):
+    G = to_networkx(data, to_undirected=True)
+
+    # Use spring layout with more space between nodes
+    pos = nx.spring_layout(G, k=0.15, iterations=50)
+
+    # Draw with improved parameters
+    plt.figure(figsize=(10, 8))
+    nx.draw(
+        G,
+        pos=pos,
+        node_color="skyblue",
+        node_size=5,
+        edge_color="gray",
+        width=0.5,
+        alpha=0.7,
+        with_labels=False,
+    )
+
+    plt.title(f"Graph visualization (showing {G.number_of_nodes()} nodes)")
+    plt.tight_layout()
     plt.show()
 
 
@@ -74,6 +89,8 @@ def compute_graph_metrics(data):
     except Exception:
         metrics["eigenvector_centrality"] = metrics["max_eigenvector"] = None
 
+    metrics["self_loops"] = G.number_of_selfloops()
+
     # # Shortest path metrics (compute on the largest connected component if not connected)
     # if nx.is_connected(G):
     #     metrics["average_shortest_path_length"] = nx.average_shortest_path_length(G)
@@ -120,12 +137,23 @@ def compute_graph_metrics(data):
     except Exception:
         metrics["algebraic_connectivity"] = None
 
+    # plot degrees distribution
+    plt.hist(
+        list(degrees.values()),
+        bins=max(degrees.values()) - min(degrees.values()) + 1,
+        color="blue",
+        alpha=0.7,
+    )
+    plt.title("Degree Distribution")
+    plt.yscale("log")
+    # plt.xscale("log")
+    plt.savefig("results/degree_distribution.png")
+
     return metrics
 
 
 if __name__ == "__main__":
-    # Example usage
-    data = build_train_graph("data/node_information.csv")
-    # plot_subgraph(data)
+    data = build_graph("data/node_information_id_remapped.csv")
+    # plot_graph(data)
     metrics = compute_graph_metrics(data)
     print(metrics)
