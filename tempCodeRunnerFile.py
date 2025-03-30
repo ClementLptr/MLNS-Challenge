@@ -1,0 +1,1 @@
+plt.hist(list(degrees.values()), bins=70, alpha=0.75)

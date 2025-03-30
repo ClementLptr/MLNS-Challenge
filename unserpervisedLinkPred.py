@@ -100,39 +100,32 @@ def jaccard_index_predictions(
         test_data (Data): The test graph data.
         proportion (float): The proportion of edges to predict.
     """
-    jaccard_coef = jaccard_index_scores(train_data)
+    attachment_coef = jaccard_index_scores(train_data)
     # Get the top k pairs with the highest scores
-    k = int(proportion * (train_data.num_edges * train_data.num_edges - 1) // 2)
-    assert k <= len(test_data.edge_index[0]), (
-        "k exceeds the number of edges in the test set"
+    prediction_edge_index = torch.cat(
+        [test_data.edge_index, test_data.fake_edge_index], dim=1
     )
+    k = int(proportion * prediction_edge_index.shape[1])
 
-    # Get the values and indices of the top-k coefficients
-    top_k_indices = torch.topk(jaccard_coef.flatten(), k=k).indices
+    test_attachment_coef = attachment_coef[
+        prediction_edge_index[0], prediction_edge_index[1]
+    ]  # Get the scores for the test edges. Output is 1D!
+    top_k_indices = torch.topk(test_attachment_coef, k=k).indices.tolist()
 
     y_pred = [
-        tuple([i // train_data.num_nodes, i % train_data.num_nodes])
-        for i in top_k_indices.tolist()
+        (prediction_edge_index[0][index].item(), prediction_edge_index[1][index].item())
+        for index in top_k_indices
     ]
 
-    precision = len(
-        set(y_pred) & set(tuple(row) for row in test_data.edge_index.t().tolist())
-    ) / len(y_pred)
-
-    recall = len(
-        set(y_pred) & set(tuple(row) for row in test_data.edge_index.t().tolist())
-    ) / len(test_data.edge_index[0])
-    f1 = 2 * (precision * recall) / (precision + recall + 1e-10)
-
-    print(
-        f"precision: {precision:.4f}, recall: {recall:.4f}, f1: {f1:.4f}, f1: {f1:.4f}"
-    )
+    return y_pred
 
 
 if __name__ == "__main__":
     data = build_graph("data/node_information_id_remapped.csv")
-    train_data, test_data = train_test_split(
-        data, train_ratio=0.8, negative_samples_factor=1
-    )
-    preferential_attachment_predictions(train_data, test_data, proportion=0.5)
+    # train_data, test_data = train_test_split(
+    #     data, train_ratio=0.8, negative_samples_factor=1
+    # )
+    train_data = Data(x=data.x, edge_index=data.edge_index)
+    test_data = Data(x=data.x, edge_index=data.test_edges)
+    jaccard_index_predictions(train_data, test_data, proportion=0.5)
     # jaccard_index_predictions(train_data, test_data, proportion=1e-4)
