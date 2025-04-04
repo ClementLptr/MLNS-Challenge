@@ -7,6 +7,7 @@ from torch_geometric.data import Data
 
 
 def build_train_test_graphs(filepath: str) -> tuple[Data, Data]:
+    """Builds the train and test graphs from the given CSV file"""
     # Read CSV and name the first column as ID
     x = pd.read_csv(filepath, header=None)
     column_names = ["ID"] + [f"feature_{i}" for i in range(1, len(x.columns))]
