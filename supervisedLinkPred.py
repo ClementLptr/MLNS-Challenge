@@ -161,8 +161,9 @@ if __name__ == "__main__":
     train_data, test_data = build_train_test_graphs(
         "data/node_information_id_remapped.csv"
     )
-    # compute_node_features(train_data, "data/node_features_id_remapped.csv")
-    node_features = pd.read_csv("data/node_features_id_remapped.csv")
+    # compute_node_features(train_data, "data/node_handcrafted_features_id_remapped.csv")
+    # node_features = pd.read_csv("data/node_handcrafted_features_id_remapped.csv")     # Using existing features
+    node_features = pd.read_csv("data/node_information_id_remapped.csv")
     model = RandomForestClassifier(
         n_estimators=100,
         max_depth=10,

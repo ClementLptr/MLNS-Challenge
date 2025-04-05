@@ -6,7 +6,7 @@ import torch
 from torch_geometric.data import Data
 
 
-def build_train_test_graphs(filepath: str) -> tuple[Data, Data]:
+def build_train_test_graphs(node_features_filepath: str) -> tuple[Data, Data]:
     """Builds the train and test graphs from the given CSV file
     Returns:
         - train_data (data): the training graph data. contains an edge_index attribute with the edges AND a fake_edge_index attribute
@@ -14,7 +14,7 @@ def build_train_test_graphs(filepath: str) -> tuple[Data, Data]:
         - test_data (Data): The testing graph data. Contains only a single edge_index attribute with the edges that we will make predictions on.
     """
     # Read CSV and name the first column as ID
-    x = pd.read_csv(filepath, header=None)
+    x = pd.read_csv(node_features_filepath, header=None)
     column_names = ["ID"] + [f"feature_{i}" for i in range(1, len(x.columns))]
     x.columns = column_names
     x = x.drop("ID", axis=1).values
