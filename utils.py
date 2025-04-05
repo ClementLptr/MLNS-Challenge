@@ -61,6 +61,8 @@ def train_test_split(data: Data, train_ratio: float = 0.8) -> tuple[Data, Data]:
 
 from datetime import datetime
 
+import numpy as np
+
 
 def convert_preds_to_submission(y_pred: list[tuple[int, int]]):
     """
@@ -82,3 +84,17 @@ def convert_preds_to_submission(y_pred: list[tuple[int, int]]):
                     submission_file.write(f"{id},1\n")
                 else:
                     submission_file.write(f"{id},0\n")
+
+
+def convert_pred_1D_array_to_submission(y_pred: np.ndarray):
+    """
+    Converts the predictions to the submission format as a CSV file.
+    Args:
+        y_pred (np.array): The predicted edges.
+    """
+    with open(
+        f"submissions/submission_{datetime.now().strftime('%m-%d_%H-%M')}.csv", "w"
+    ) as submission_file:
+        submission_file.write("ID,Predicted\n")
+        for id, pred in enumerate(y_pred):
+            submission_file.write(f"{id},{int(pred)}\n")
