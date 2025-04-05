@@ -1,4 +1,5 @@
 from datetime import datetime
+from typing import Literal
 
 import networkx as nx
 import numpy as np
@@ -45,7 +46,9 @@ def compute_node_features(data: Data, output_filepath: str) -> None:
 
 
 # TODO: Add features relating to the pair of nodes
-def build_dataset(data: Data) -> tuple[np.ndarray, np.ndarray]:
+def build_dataset(
+    data: Data, method: Literal["concatenate", "product"] = "product"
+) -> tuple[np.ndarray, np.ndarray]:
     """Build a dataset for edge prediction. The input is a concatenation of each node features,
     as well as features relating to the pair of nodes (nb of common neighbors, jaccard coefficient, etc.)
     Args:
@@ -57,20 +60,36 @@ def build_dataset(data: Data) -> tuple[np.ndarray, np.ndarray]:
     node_features = pd.read_csv("data/node_features_id_remapped.csv")
     edge_index = data.edge_index.numpy()
     fake_edge_index = data.fake_edge_index.numpy()
-    X_positive = np.array(
-        [
-            node_features.iloc[edge_index[0, i]].tolist()
-            + node_features.iloc[edge_index[1, i]].tolist()
-            for i in range(edge_index.shape[1])
-        ]
-    )
-    X_negative = np.array(
-        [
-            node_features.iloc[fake_edge_index[0, i]].tolist()
-            + node_features.iloc[fake_edge_index[1, i]].tolist()
-            for i in range(fake_edge_index.shape[1])
-        ]
-    )
+    if method == "concatenate":
+        X_positive = np.array(
+            [
+                node_features.iloc[edge_index[0, i]].tolist()
+                + node_features.iloc[edge_index[1, i]].tolist()
+                for i in range(edge_index.shape[1])
+            ]
+        )
+        X_negative = np.array(
+            [
+                node_features.iloc[fake_edge_index[0, i]].tolist()
+                + node_features.iloc[fake_edge_index[1, i]].tolist()
+                for i in range(fake_edge_index.shape[1])
+            ]
+        )
+    elif method == "product":
+        X_positive = np.array(
+            [
+                node_features.iloc[edge_index[0, i]]
+                * node_features.iloc[edge_index[1, i]]
+                for i in range(edge_index.shape[1])
+            ]
+        )
+        X_negative = np.array(
+            [
+                node_features.iloc[fake_edge_index[0, i]]
+                * node_features.iloc[fake_edge_index[1, i]]
+                for i in range(fake_edge_index.shape[1])
+            ]
+        )
     X = np.vstack((X_positive, X_negative))
     y = np.concatenate(
         (np.ones(X_positive.shape[0]), np.zeros(X_negative.shape[0])), axis=0
@@ -79,7 +98,7 @@ def build_dataset(data: Data) -> tuple[np.ndarray, np.ndarray]:
 
 
 def build_test_dataset(
-    test_data: Data,
+    test_data: Data, method: Literal["concatenate", "product"] = "product"
 ) -> np.ndarray:
     """Build a dataset for edge prediction. The input is a concatenation of each node features,
     as well as features relating to the pair of nodes (nb of common neighbors, jaccard coefficient, etc.)
@@ -90,14 +109,52 @@ def build_test_dataset(
     """
     node_features = pd.read_csv("data/node_features_id_remapped.csv")
     edge_index = test_data.edge_index.numpy()
-    X_test = np.array(
-        [
-            node_features.iloc[edge_index[0, i]].tolist()
-            + node_features.iloc[edge_index[1, i]].tolist()
-            for i in range(edge_index.shape[1])
-        ]
-    )
+    if method == "concatenate":
+        X_test = np.array(
+            [
+                node_features.iloc[edge_index[0, i]].tolist()
+                + node_features.iloc[edge_index[1, i]].tolist()
+                for i in range(edge_index.shape[1])
+            ]
+        )
+    elif method == "product":
+        X_test = np.array(
+            [
+                node_features.iloc[edge_index[0, i]]
+                * node_features.iloc[edge_index[1, i]]
+                for i in range(edge_index.shape[1])
+            ]
+        )
     return X_test
+
+
+def train_and_fit_model(
+    train_data,
+    model,
+    method: Literal["product", "concatenate"] = "product",
+    n_folds: int = 5,
+):
+    """
+    Evaluates the model using cross-validation.
+    Args:
+        - train_data (Data): The training graph data.
+        - method (Literal["product", "concatenate"]): The method to use for building the dataset.
+        - model (RandomForestClassifier): The model to evaluate.
+        - n_folds (int): The number of folds for cross-validation.
+    Returns:
+        - model (RandomForestClassifier): The trained model.
+        - train_accuracies (list): The accuracies on the training set for each fold.
+        - val_accuracies (list): The accuracies on the validation set for each fold.
+    """
+    train_accuracies, val_accuracies = [], []
+    for k in range(n_folds):
+        train_data, val_data = train_val_split(train_data)
+        X_train, y_train = build_dataset(train_data, method=method)
+        X_val, y_val = build_dataset(val_data, method=method)
+        model.fit(X_train, y_train)
+        train_accuracies.append(model.score(X_train, y_train))
+        val_accuracies.append(model.score(X_val, y_val))
+    return model, train_accuracies, val_accuracies
 
 
 if __name__ == "__main__":
@@ -105,20 +162,19 @@ if __name__ == "__main__":
         "data/node_information_id_remapped.csv"
     )
     # compute_node_features(train_data, "data/node_features_id_remapped.csv")
-    train_data, val_data = train_val_split(train_data)
     node_features = pd.read_csv("data/node_features_id_remapped.csv")
-    X_train, y_train = build_dataset(train_data)
-    X_val, y_val = build_dataset(val_data)
-    X_test = build_test_dataset(test_data)
-    model = RandomForestClassifier(n_estimators=100, random_state=42)
-    model.fit(X_train, y_train)
-    print("Train accuracy: ", model.score(X_train, y_train))
-    print("Validation accuracy: ", model.score(X_val, y_val))
-    print(val_data)
-    y_pred = model.predict(X_test)
-    with open(
-        f"submissions/submission_{datetime.now().strftime('%m-%d_%H-%M')}.csv", "w"
-    ) as submission_file:
-        submission_file.write("ID,Predicted\n")
-        for id, pred in enumerate(y_pred):
-            submission_file.write(f"{id},{int(pred)}\n")
+    model = RandomForestClassifier(
+        n_estimators=100,
+        max_depth=10,
+    )
+    model, train_accuracies, val_accuracies = train_and_fit_model(
+        train_data,
+        model,
+        method="concatenate",
+        n_folds=5,
+    )
+    print("Train accuracies: ", train_accuracies)
+    print("Validation accuracies: ", val_accuracies)
+    # X_test = build_test_dataset(test_data, method="product")
+    # y_pred = model.predict(X_test)
+    # convert_preds_to_submission(y_pred)

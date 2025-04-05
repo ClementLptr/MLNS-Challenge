@@ -55,25 +55,34 @@ def build_train_test_graphs(filepath: str) -> tuple[Data, Data]:
 
 def train_val_split(train_data: Data, train_ratio: float = 0.8) -> tuple[Data, Data]:
     """
-    Splits the graph data into training and testing sets.
+    Splits the graph data into training and testing sets randomly.
     Args:
         - data (Data): The graph data. The real edges are in the edge_index attribute.  The fake edges are in the
         fake_edge_index attribute. Fake edges are built from the train.txt file, where 50% are labeled as 1 and 50% as 0.
         - train_ratio (float): The proportion of edges to include in the training set.
-        negative_samples_factor (int): The factor by which to increase the number of negative samples.
     Returns:
         - Data, Data: The training and testing graph data.
     """
-    num_train_edges = int(train_data.edge_index.size(1) * train_ratio)
-    num_train_fake_edges = int(train_data.fake_edge_index.size(1) * train_ratio)
+    num_edges = train_data.edge_index.size(1)
+    num_fake_edges = train_data.fake_edge_index.size(1)
 
-    train_edge_index = train_data.edge_index[:, :num_train_edges]
-    val_edge_index = train_data.edge_index[:, num_train_edges:]
+    edge_perm = torch.randperm(num_edges)
+    fake_edge_perm = torch.randperm(num_fake_edges)
 
-    fake_train_edge_index = train_data.fake_edge_index[:, :num_train_fake_edges]
-    fake_val_edge_index = train_data.fake_edge_index[:, num_train_fake_edges:]
+    num_train_edges = int(num_edges * train_ratio)
+    num_train_fake_edges = int(num_fake_edges * train_ratio)
 
-    train_data = Data(
+    train_edge_index = train_data.edge_index[:, edge_perm[:num_train_edges]]
+    val_edge_index = train_data.edge_index[:, edge_perm[num_train_edges:]]
+
+    fake_train_edge_index = train_data.fake_edge_index[
+        :, fake_edge_perm[:num_train_fake_edges]
+    ]
+    fake_val_edge_index = train_data.fake_edge_index[
+        :, fake_edge_perm[num_train_fake_edges:]
+    ]
+
+    train_data_new = Data(
         x=train_data.x,
         edge_index=train_edge_index,
         fake_edge_index=fake_train_edge_index,
@@ -82,7 +91,7 @@ def train_val_split(train_data: Data, train_ratio: float = 0.8) -> tuple[Data, D
         x=train_data.x, edge_index=val_edge_index, fake_edge_index=fake_val_edge_index
     )
 
-    return train_data, val_data
+    return train_data_new, val_data
 
 
 def remap_node_ids() -> None:
