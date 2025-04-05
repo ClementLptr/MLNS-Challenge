@@ -5,7 +5,7 @@ from torch import Tensor
 from torch_geometric.data import Data
 from torch_geometric.utils import subgraph, to_networkx
 
-from dataPreparation import build_train_test_graphs, train_test_split
+from dataPreparation import build_train_test_graphs, train_val_split
 from utils import convert_preds_to_submission
 
 
