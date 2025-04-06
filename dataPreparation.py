@@ -8,16 +8,18 @@ from torch_geometric.data import Data
 
 def build_train_test_graphs(node_features_filepath: str) -> tuple[Data, Data]:
     """Builds the train and test graphs from the given CSV file
+    Args:
+        - node_features_filepath (str): The path to the CSV file containing the node features, built by the compute_node_features function.
     Returns:
         - train_data (data): the training graph data. contains an edge_index attribute with the edges AND a fake_edge_index attribute
         with fake edges (built by using the labels in the train.txt file)
+
         - test_data (Data): The testing graph data. Contains only a single edge_index attribute with the edges that we will make predictions on.
     """
     # Read CSV and name the first column as ID
-    x = pd.read_csv(node_features_filepath, header=None)
-    column_names = ["ID"] + [f"feature_{i}" for i in range(1, len(x.columns))]
-    x.columns = column_names
-    x = x.drop("ID", axis=1).values
+    x = pd.read_csv(node_features_filepath, header="infer")
+    x.drop(columns=["node_id"], inplace=True)
+    x = x.values
 
     train_data, test_data = (
         Data(x=torch.tensor(x, dtype=torch.float)),
