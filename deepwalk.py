@@ -8,6 +8,7 @@ import torch.profiler
 import yaml
 from networkx import generate_random_paths
 from torch import Tensor
+from torch.profiler import schedule
 from torch.utils.data import DataLoader, TensorDataset
 from torch_geometric.utils import to_networkx
 from tqdm import tqdm
@@ -88,40 +89,36 @@ model = DeepWalk(NUM_NODES, EMBEDDING_DIM).to(device)
 optimizer = optim.Adam(model.parameters(), lr=LR)
 loss_fn = nn.BCEWithLogitsLoss()
 
-# profile_dir = "wandb/profiler"
-
-# profiler = torch.profiler.profile(
-#     activities=[
-#         torch.profiler.ProfilerActivity.CPU,
-#         # torch.profiler.ProfilerActivity.CUDA,
-#     ],
-#     # schedule=schedule,  # see the profiler docs for details on scheduling
-#     on_trace_ready=torch.profiler.tensorboard_trace_handler(profile_dir),
-#     with_stack=True,
-#     profile_memory=True,
-#     record_shapes=True,
-# )
+profile_dir = "wandb/profiler"
+prof_schedule = schedule(wait=1, warmup=2, active=3, repeat=2)
 
 
 wandb.watch(model, log="all", criterion=loss_fn, log_freq=10000, log_graph=True)
 
 for i in tqdm(range(N_EPOCHS)):
-    train_loss = 0.0
-    for batch_index, (X, y) in enumerate(train_dataloader):
-        optimizer.zero_grad()
-        y_pred = model(X)
-        loss = loss_fn(y_pred, y)
-        train_loss += loss.item()
-        loss.backward()
-        optimizer.step()
-
-    # with profiler:
-    with torch.no_grad():
-        test_loss = 0.0
-        for X, y in test_dataloader:
+    with torch.profiler.profile(
+        activities=[torch.profiler.ProfilerActivity.CPU],
+        schedule=prof_schedule,  # Use the schedule
+        on_trace_ready=torch.profiler.tensorboard_trace_handler(profile_dir),
+        with_stack=True,
+        profile_memory=True,
+        record_shapes=True,
+    ) as prof:
+        train_loss = 0.0
+        for batch_index, (X, y) in enumerate(train_dataloader):
+            optimizer.zero_grad()
             y_pred = model(X)
             loss = loss_fn(y_pred, y)
-            test_loss += loss.item()
+            train_loss += loss.item()
+            loss.backward()
+            optimizer.step()
+
+        with torch.no_grad():
+            test_loss = 0.0
+            for X, y in test_dataloader:
+                y_pred = model(X)
+                loss = loss_fn(y_pred, y)
+                test_loss += loss.item()
 
     # profiler.export_chrome_trace(
     #     f"{profile_dir}/{i}.pt.trace.json"
