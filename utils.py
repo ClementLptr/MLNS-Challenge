@@ -61,3 +61,8 @@ def convert_pred_1D_array_to_submission(y_pred: np.ndarray):
         submission_file.write("ID,Predicted\n")
         for id, pred in enumerate(y_pred):
             submission_file.write(f"{id},{int(pred)}\n")
+
+
+# def binarize_node_features(filepath: str) -> None:
+#     """
+#     Change the zeros in the node features to -1.0 to avoid Nans in training.

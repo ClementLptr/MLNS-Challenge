@@ -5,6 +5,7 @@ import networkx as nx
 import numpy as np
 import pandas as pd
 import torch
+from networkx.algorithms.isolate import number_of_isolates
 from sklearn.ensemble import AdaBoostClassifier, RandomForestClassifier
 from sklearn.tree import DecisionTreeClassifier
 from torch import tensor
@@ -184,6 +185,8 @@ def train_and_fit_model(
 
 if __name__ == "__main__":
     train_data, test_data = build_train_test_graphs("data/degrees_id_remapped.csv")
+    train_data = to_networkx(train_data, to_undirected=True)
+    print(number_of_isolates(train_data))
     # compute_node_features(train_data, "data/degrees_id_remapped.csv")
     # model = RandomForestClassifier(
     #     n_estimators=100,

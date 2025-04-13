@@ -6,7 +6,7 @@ import torch
 from torch_geometric.data import Data
 
 
-def build_train_test_graphs(node_features_filepath: str) -> tuple[Data, Data]:
+def build_train_test_graphs() -> tuple[Data, Data]:
     """Builds the train and test graphs from the given CSV file
     Args:
         - node_features_filepath (str): The path to the CSV file containing the node features, built by the compute_node_features function.
@@ -16,10 +16,8 @@ def build_train_test_graphs(node_features_filepath: str) -> tuple[Data, Data]:
 
         - test_data (Data): The testing graph data. Contains only a single edge_index attribute with the edges that we will make predictions on.
     """
-    # Read CSV and name the first column as ID
-    x = pd.read_csv(node_features_filepath, header="infer")
-    x.drop(columns=["node_id"], inplace=True)
-    x = x.values
+    x = np.loadtxt("data/node_information.csv", dtype=float, delimiter=",")
+    x = x[:, 1:]  # Remove the first column (node IDs)
 
     train_data, test_data = (
         Data(x=torch.tensor(x, dtype=torch.float)),
@@ -109,6 +107,7 @@ def remap_node_ids() -> None:
     train_edges = np.loadtxt("data/train.txt", dtype=int, delimiter=" ")
     test_edges = np.loadtxt("data/test.txt", dtype=int, delimiter=" ")
 
+    # First column of the file are the node IDs
     nodes[:, 0] = np.arange(len(nodes))
 
     mapping = json.load(open("data/node_id_mapping.json", "r"))
@@ -127,7 +126,6 @@ def remap_node_ids() -> None:
     # Save the remapped edge files
     np.savetxt("data/train_edges_id_remapped.txt", train_edges, fmt="%d", delimiter=" ")
     np.savetxt("data/test_edges_id_remapped.txt", test_edges, fmt="%d", delimiter=" ")
-    np.savetxt("data/node_information_id_remapped.csv", nodes, fmt="%d", delimiter=",")
 
 
 def node_id_mapping() -> None:
@@ -141,8 +139,11 @@ def node_id_mapping() -> None:
         json.dump(mapping, f)
 
 
-if __name__ == "__main__":
-    # data = build_graph()
-    # node_id_mapping()
-    remap_node_ids()
-    # remap_node_ids("data/node_information.csv")
+# if __name__ == "__main__":
+#     data = build_graph()
+#     node_id_mapping()
+#     remap_node_ids()
+#     remap_node_ids("data/node_information.csv")
+#     train_graph, test_graph = build_train_test_graphs(
+#         "data/node_information_id_remapped.csv"
+#     )  # Use whatever data for the nodes, not gonna be used
