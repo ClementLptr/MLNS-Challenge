@@ -1,14 +1,12 @@
-# with open("submissions/submission-ones.csv", "w") as submission_file:
-#     submission_file.write("Id,Prediction\n")
-#     for i in range(0, 3497):
-#         submission_file.write(f"{i},1\n")
+import torch
+import torch.nn as nn
+import torch.nn.functional as F
+import torch.optim as optim
 
-with open("data/train.txt", "r") as test_file:
-    n_lines = 0
-    lines = test_file.readlines()
-    counter = 0
-    for line in lines:
-        n_lines += 1
-        if line.endswith("1\n"):
-            counter += 1
-    print(counter / n_lines)
+a = torch.tensor([[1, 2, 3, 4, 4, 5], [2, 3, 45, 4, 1, 3], [2, 3, 4, 1, 9, 4]])
+
+ones_indices = torch.tensor([[0, 1], [1, 2], [2, 3]])
+
+a[:, ones_indices] = 1
+
+print(a)
